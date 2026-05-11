@@ -1,0 +1,13 @@
+.env
+data/raw/
+data/bronze/
+data/silver/
+__pycache__/
+*.pyc
+*.parquet
+logs/
+dbt_ons/target/
+dbt_ons/logs/
+dbt_ons/dbt_packages/
+.DS_Store
+Thumbs.db

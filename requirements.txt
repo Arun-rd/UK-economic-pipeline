@@ -1,0 +1,11 @@
+apache-airflow==2.8.1
+dbt-core==1.7.14
+dbt-postgres==1.7.14
+pandas==2.2.2
+numpy==1.26.4
+psycopg2-binary==2.9.9
+requests==2.31.0
+python-dotenv==1.0.1
+pyarrow==16.0.0
+pytest==8.1.1
+flake8==7.0.0

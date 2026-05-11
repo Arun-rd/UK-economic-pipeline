@@ -1,0 +1,24 @@
+name: dbt_ons
+version: "1.0.0"
+config-version: 2
+profile: ons_pipeline
+
+model-paths: ["models"]
+test-paths:  ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  dbt_ons:
+    bronze:
+      +schema:       bronze
+      +materialized: view
+      +tags:         ["bronze"]
+    silver:
+      +schema:       silver
+      +materialized: view
+      +tags:         ["silver"]
+    gold:
+      +schema:       gold
+      +materialized: table
+      +tags:         ["gold"]

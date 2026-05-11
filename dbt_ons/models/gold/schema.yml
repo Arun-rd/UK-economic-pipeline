@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: gold_uk_economic_kpis
+    description: "Gold KPI mart: UK economic indicators with QoQ, YoY, and trend analysis"
+    columns:
+      - name: series_id
+        tests: [not_null]
+      - name: indicator_name
+        tests: [not_null]
+      - name: period_quarter
+        tests: [not_null]
+      - name: value
+        tests: [not_null]
+      - name: trend_direction
+        tests:
+          - accepted_values:
+              values: ["Rising", "Falling", "Flat"]

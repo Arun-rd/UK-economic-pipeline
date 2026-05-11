@@ -1,0 +1,8 @@
+version: 2
+sources:
+  - name: silver
+    schema: silver
+    description: "Cleaned and typed ONS indicators"
+    tables:
+      - name: ons_indicators
+        description: "Cleaned ONS time series — typed, deduplicated, validated"

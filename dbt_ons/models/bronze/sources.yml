@@ -1,0 +1,16 @@
+version: 2
+sources:
+  - name: bronze
+    schema: bronze
+    description: "Raw ONS API data — append-only, never modified"
+    tables:
+      - name: ons_raw
+        description: "Raw ONS time series API responses"
+        columns:
+          - name: id
+          - name: dataset_id
+          - name: series_id
+          - name: period
+          - name: value
+          - name: raw_json
+          - name: ingested_at
