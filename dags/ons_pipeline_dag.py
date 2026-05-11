@@ -4,17 +4,17 @@ ons_pipeline_dag.py
 Main Airflow DAG for the UK Economic Indicators pipeline.
 
 Schedule: Daily at 06:00 UTC
-Layers:   Bronze (raw ingest) → Silver (clean) → Gold (dbt)
+Layers:   Bronze (raw ingest) -> Silver (clean) -> Gold (dbt)
 
 Tasks:
-  1. health_check         — verify DB connectivity
-  2. ingest_bronze        — fetch ONS API → bronze.ons_raw
-  3. validate_bronze      — row count & null checks
-  4. process_silver       — bronze → silver.ons_indicators
-  5. validate_silver      — data quality assertions
-  6. run_dbt_models       — dbt run (gold layer)
-  7. run_dbt_tests        — dbt test
-  8. pipeline_summary     — log final counts
+  1. health_check         -- verify DB connectivity
+  2. ingest_bronze        -- fetch ONS API -> bronze.ons_raw
+  3. validate_bronze      -- row count & null checks
+  4. process_silver       -- bronze -> silver.ons_indicators
+  5. validate_silver      -- data quality assertions
+  6. run_dbt_models       -- dbt run (gold layer)
+  7. run_dbt_tests        -- dbt test
+  8. pipeline_summary     -- log final counts
 """
 import logging
 from datetime import datetime, timedelta
@@ -46,8 +46,6 @@ def _get_conn():
     return psycopg2.connect(**DB_CONN)
 
 
-# ── Task functions ────────────────────────────────────────────────────────────
-
 def health_check(**ctx):
     """Verify PostgreSQL is reachable and schemas exist."""
     conn = _get_conn()
@@ -56,8 +54,8 @@ def health_check(**ctx):
                     "WHERE schema_name IN ('bronze','silver','gold')")
         schemas = [r[0] for r in cur.fetchall()]
     conn.close()
-    assert len(schemas) == 3, f"Expected 3 schemas, found: {schemas}"
-    log.info(f"Health check passed. Schemas present: {schemas}")
+    assert len(schemas) == 3, "Expected 3 schemas, found: {}".format(schemas)
+    log.info("Health check passed. Schemas present: %s", schemas)
 
 
 def ingest_bronze(**ctx):
@@ -70,7 +68,7 @@ def ingest_bronze(**ctx):
     rows = fetch_all_series()
     loaded = load_bronze(rows)
     ctx["ti"].xcom_push(key="bronze_rows", value=loaded)
-    log.info(f"Bronze ingestion complete: {loaded} rows")
+    log.info("Bronze ingestion complete: %d rows", loaded)
 
 
 def validate_bronze(**ctx):
@@ -85,11 +83,12 @@ def validate_bronze(**ctx):
         series = cur.fetchone()[0]
     conn.close()
 
-    assert total > 0,          f"Bronze table is empty!"
-    assert series >= 3,        f"Expected at least 3 series, got {series}"
+    assert total > 0, "Bronze table is empty!"
+    assert series >= 3, "Expected at least 3 series, got {}".format(series)
     null_pct = nulls / total * 100
-    assert null_pct < 20,      f"Too many null values: {null_pct:.1f}%"
-    log.info(f"Bronze validation passed: {total} rows, {series} series, {null_pct:.1f}% nulls")
+    assert null_pct < 20, "Too many null values: {:.1f}%".format(null_pct)
+    log.info("Bronze validation passed: %d rows, %d series, %.1f%% nulls",
+             total, series, null_pct)
 
 
 def process_silver(**ctx):
@@ -102,7 +101,7 @@ def process_silver(**ctx):
     bronze_rows = get_latest_bronze()
     upserted = process_bronze_to_silver(bronze_rows)
     ctx["ti"].xcom_push(key="silver_rows", value=upserted)
-    log.info(f"Silver processing complete: {upserted} rows upserted")
+    log.info("Silver processing complete: %d rows upserted", upserted)
 
 
 def validate_silver(**ctx):
@@ -111,17 +110,23 @@ def validate_silver(**ctx):
     with conn.cursor() as cur:
         cur.execute("SELECT COUNT(*) FROM silver.ons_indicators WHERE is_valid = TRUE")
         valid = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM silver.ons_indicators WHERE value_numeric IS NULL AND is_valid = TRUE")
+        cur.execute(
+            "SELECT COUNT(*) FROM silver.ons_indicators "
+            "WHERE value_numeric IS NULL AND is_valid = TRUE"
+        )
         null_numeric = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM silver.ons_indicators WHERE period_date > CURRENT_DATE")
+        cur.execute(
+            "SELECT COUNT(*) FROM silver.ons_indicators WHERE period_date > CURRENT_DATE"
+        )
         future = cur.fetchone()[0]
     conn.close()
 
-    assert valid > 0,      "No valid rows in silver!"
-    assert future == 0,    f"Found {future} rows with future dates"
+    assert valid > 0, "No valid rows in silver!"
+    assert future == 0, "Found {} rows with future dates".format(future)
     null_pct = null_numeric / valid * 100 if valid > 0 else 100
-    assert null_pct < 10,  f"Too many null numeric values: {null_pct:.1f}%"
-    log.info(f"Silver validation passed: {valid} valid rows, {null_pct:.1f}% null numeric")
+    assert null_pct < 10, "Too many null numeric values: {:.1f}%".format(null_pct)
+    log.info("Silver validation passed: %d valid rows, %.1f%% null numeric",
+             valid, null_pct)
 
 
 def pipeline_summary(**ctx):
@@ -139,18 +144,16 @@ def pipeline_summary(**ctx):
             gold = "not yet built"
     conn.close()
     log.info("=" * 50)
-    log.info(f"PIPELINE SUMMARY")
-    log.info(f"  Bronze rows : {bronze}")
-    log.info(f"  Silver rows : {silver}")
-    log.info(f"  Gold rows   : {gold}")
+    log.info("PIPELINE SUMMARY")
+    log.info("  Bronze rows : %s", bronze)
+    log.info("  Silver rows : %s", silver)
+    log.info("  Gold rows   : %s", gold)
     log.info("=" * 50)
 
 
-# ── DAG definition ────────────────────────────────────────────────────────────
-
 with DAG(
     dag_id="ons_uk_economic_pipeline",
-    description="UK Economic Indicators: Bronze → Silver → Gold medallion pipeline",
+    description="UK Economic Indicators: Bronze -> Silver -> Gold medallion pipeline",
     default_args=DEFAULT_ARGS,
     schedule_interval="0 6 * * *",
     start_date=days_ago(1),
@@ -200,5 +203,4 @@ with DAG(
         trigger_rule="all_done",
     )
 
-    # DAG dependency chain
     t_health >> t_bronze >> t_val_bronze >> t_silver >> t_val_silver >> t_dbt_run >> t_dbt_test >> t_summary
